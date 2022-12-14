@@ -1,0 +1,11 @@
+CREATE Database IF NOT EXISTS GoTextDb;
+USE GoTextDb;
+CREATE TABLE IF NOT EXISTS User(
+	id	INT AUTO_INCREMENT,
+	first_name	VARCHAR(45),
+	last_name	VARCHAR(45),
+	email	TEXT,
+	CONSTRAINT PRIMARY KEY(id)
+);
+
+SELECT * FROM User;

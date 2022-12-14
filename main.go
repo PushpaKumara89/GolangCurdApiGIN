@@ -27,7 +27,7 @@ func main() {
 	initializeGinRouter()
 }
 
-/*----------------gorilla-----------------*/
+/*----------------gin-----------------*/
 // Gin function
 
 func RunInfo(context *gin.Context) {
@@ -61,14 +61,12 @@ func GetUsers(context *gin.Context) {
 
 func CreateUser(context *gin.Context) {
 	var newUser User
-	db := DBConnection()
 	err := context.BindJSON(&newUser)
 	if err != nil {
-		db.Close()
 		context.String(http.StatusBadRequest, err.Error())
 		return
 	}
-
+	db := DBConnection()
 	insert, errIn := db.Query("INSERT INTO user VALUES (?, ?, ?, ?)", nil, newUser.FirstName, newUser.LastName, newUser.Email)
 	insert.Close()
 	db.Close()
@@ -109,21 +107,27 @@ func GetUser(context *gin.Context) {
 
 func Update(context *gin.Context) {
 	var updatedUser User
-
 	err := context.BindJSON(&updatedUser)
 	if err != nil {
 		context.String(http.StatusBadRequest, err.Error())
 		return
-	} else {
-		for i := range users {
-			if updatedUser.Id == users[i].Id {
-				users[i] = updatedUser
-				context.IndentedJSON(http.StatusOK, updatedUser)
-				return
-			}
-		}
 	}
-	context.IndentedJSON(http.StatusNotFound, "User Notfound :"+updatedUser.FirstName+" "+updatedUser.LastName)
+	db := DBConnection()
+	insert, errIn := db.Query("UPDATE User SET first_name=?, last_name=?, email=? WHERE id=?; ", updatedUser.FirstName, updatedUser.LastName, updatedUser.Email, updatedUser.Id)
+	insert.Close()
+	db.Close()
+
+	if errIn != nil {
+		context.IndentedJSON(http.StatusForbidden, gin.H{
+			"message": err.Error(),
+			"status":  false,
+		})
+		return
+	}
+	context.IndentedJSON(http.StatusCreated, gin.H{
+		"message": "Updated Success ...",
+		"status":  true,
+	})
 }
 
 func Delete(context *gin.Context) {
@@ -152,7 +156,7 @@ func initializeGinRouter() {
 	userRoute := r.Group("/users")
 	{
 		userRoute.GET("/getAll", GetUsers)
-		userRoute.POST("/", CreateUser)
+		userRoute.POST("/create", CreateUser)
 		userRoute.GET("/get/:id", GetUser)
 		userRoute.PUT("/update", Update)
 		userRoute.DELETE("/delete/:id", Delete)
@@ -167,7 +171,7 @@ func initializeGinRouter() {
 
 func DBConnection() *sql.DB {
 	// Open up our database connection.
-	db, err := sql.Open("mysql", "root:1234@tcp(localhost:3307)/test")
+	db, err := sql.Open("mysql", "root:1234@tcp(localhost:3307)/GoTextDb")
 
 	// if there is an error opening the connection, handle it
 	if err != nil {
